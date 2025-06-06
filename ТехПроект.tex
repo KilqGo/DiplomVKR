@@ -1,10 +1,9 @@
 \section{Технический проект}
-\subsection{Общая характеристика организации решения задачи}
+\subsection{Общие сведения о программно-информационной системе}
 
 Необходимо разработать веб-приложение, которое организует работу в сервис-центре и поможет с его продвижением. Веб-приложение должно поспособствовать в организации работы сервиса Pc-Club и привлечь новых клиентов. Программно-информационная система представляет собой веб-приложение с архитектурой "клиент-сервер"
 
 \subsection{Обоснование выбора средств разработки}
-\subsubsection{Описание используемых технологий и языков программирования}
 
 В процессе разработки веб-приложения потребовались языки для реализации разметки на странице, логики страницы, для настройки внешнего вида, также требуется создать базу данных для хранения всей информации. 
 
@@ -28,7 +27,7 @@ Js или же JavaScript ключевой язык программирован
 
 Кросплатформенный  дистрибутив для сборки локального веб-сервера, содержит в себе Apache, MySQL нужные для реализации базы данных в разработке. Управление базой данных происходит через PhpMyAdmin - веб-приложение для администрирования БД, с помощью удобного графического интерфейса можно создавать, редактировать, а также установить на сервер. Взаимодействие с SQL происходит посредством специальных SQL запросов.
 
-\subsection{Диаграмма компонентов и схема обмена данными между файлами компонента}
+\subsection{Разработка архитектуры программного обеспечения}
 
 На рисунке \ref{thatsmedio1:image} изображена диаграмма компонентов для проектируемой системы. В диаграмме изображено отношение между компонентами и их взаимодействие.
 
@@ -139,7 +138,7 @@ Stock--management.php: Интерфейс для администраторов.
 Для добавлени: add--data.php.
 
 \newpage
-\subsection{Структура базы данных sql и таблиц}
+\subsection{Проект базы данных}
 
 Реляционная схема (рис.~\ref{struct:image}) отражает отношение данных в sql в удобном табличном виде.
 
@@ -157,23 +156,18 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Customer
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Customer с кратким именем CTR\label{tab:customer}}\\
-	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Customer} & \multicolumn{4}{c|}{CTR} \\ \hline
+	\caption{Структура таблицы Customer\label{tab:customer}}\\ \hline
 	\multicolumn{1}{|c|}{Key Type} & \multicolumn{1}{c|}{Optionality} & \multicolumn{1}{c|}{Column name} & \multicolumn{1}{c|}{Data type} & \multicolumn{1}{c|}{Size} \\ \hline
 	pk & * & ctr\_id & NUMBER & 13 \\ \hline
 	& * & full\_name & VARCHAR2 & 110 \\ \hline
 	& * & phone\_namber & NUMBER & 11 \\ \hline
 	& * & legal\_address & VARCHAR2 & 110 \\ \hline
 \end{xltabular}
-
 % Таблица Master
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Master с кратким именем MTR\label{tab:master}}\\
-	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Master} & \multicolumn{4}{c|}{MTR} \\ \hline
+	\caption{Описание таблицы Master\label{tab:master}}\\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Master} & \multicolumn{4}{c|}{MTR} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & mtr\_id & NUMBER & 13 \\ \hline
 	& * & full\_name & VARCHAR2 & 110 \\ \hline
@@ -184,10 +178,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Case
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Mcase с кратким именем CSE\label{tab:case}}\\
+	\caption{Описание таблицы Mcase\label{tab:case}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Mcase} & \multicolumn{4}{c|}{CSE} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Mcase} & \multicolumn{4}{c|}{CSE} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & cse\_id & NUMBER & 13 \\ \hline
 	& * & case\_name & VARCHAR2 & 50 \\ \hline
@@ -200,10 +194,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Motherboard
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Motherboard с кратким именем MBD\label{tab:motherboard}}\\
+	\caption{Описание таблицы Motherboard\label{tab:motherboard}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Motherboard} & \multicolumn{4}{c|}{MBD} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Motherboard} & \multicolumn{4}{c|}{MBD} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & mbd\_id & NUMBER & 13 \\ \hline
 	& * & motherboard\_name & VARCHAR2 & 50 \\ \hline
@@ -215,12 +209,14 @@ Stock--management.php: Интерфейс для администраторов.
 	& * & stock & NUMBER & 5 \\ \hline
 \end{xltabular}
 
+\newpage
+
 % Таблица Processor
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Processor с кратким именем CPU\label{tab:processor}}\\
+	\caption{Описание таблицы Processor\label{tab:processor}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Processor} & \multicolumn{4}{c|}{CPU} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Processor} & \multicolumn{4}{c|}{CPU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & cpu\_id & NUMBER & 13 \\ \hline
 	& * & unit\_name & VARCHAR2 & 50 \\ \hline
@@ -234,10 +230,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица RAM
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы RAM с кратким именем RAM\label{tab:ram}}\\
+	\caption{Описание таблицы RAM\label{tab:ram}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{RAM} & \multicolumn{4}{c|}{RAM} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{RAM} & \multicolumn{4}{c|}{RAM} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & ram\_id & NUMBER & 13 \\ \hline
 	& * & ram\_name & VARCHAR2 & 50 \\ \hline
@@ -251,10 +247,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Storage
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Storage с кратким именем SDU\label{tab:storage}}\\
+	\caption{Описание таблицы Storage\label{tab:storage}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Storage} & \multicolumn{4}{c|}{SDU} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Storage} & \multicolumn{4}{c|}{SDU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & sdu\_id & NUMBER & 13 \\ \hline
 	& * & storage\_name & VARCHAR2 & 50 \\ \hline
@@ -266,12 +262,14 @@ Stock--management.php: Интерфейс для администраторов.
 	& * & stock & NUMBER & 5 \\ \hline
 \end{xltabular}
 
+\newpage
+
 % Таблица Power Unit
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Power\_unit с кратким именем PSU\label{tab:psu}}\\
+	\caption{Описание таблицы Power\_unit\label{tab:psu}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Power\_unit} & \multicolumn{4}{c|}{PSU} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Power\_unit} & \multicolumn{4}{c|}{PSU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & psu\_id & NUMBER & 13 \\ \hline
 	& * & power\_name & VARCHAR2 & 50 \\ \hline
@@ -283,10 +281,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Graphics Card
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Graphics\_card с кратким именем GPU\label{tab:gpu}}\\
+	\caption{Описание таблицы Graphics\_card\label{tab:gpu}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Graphics\_card} & \multicolumn{4}{c|}{GPU} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Graphics\_card} & \multicolumn{4}{c|}{GPU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & gpu\_id & NUMBER & 13 \\ \hline
 	& * & gpu\_name & VARCHAR2 & 50 \\ \hline
@@ -299,10 +297,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Assembly Order
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Assembly\_order с кратким именем ASO\label{tab:aso}}\\
+	\caption{Описание таблицы Assembly\_order\label{tab:aso}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Assembly\_order} & \multicolumn{4}{c|}{ASO} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Assembly\_order} & \multicolumn{4}{c|}{ASO} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & assembly\_order\_id & NUMBER & 13 \\ \hline
 	& * & assembly\_price & NUMBER & 50 \\ \hline
@@ -322,10 +320,10 @@ Stock--management.php: Интерфейс для администраторов.
 
 % Таблица Users
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
-	\caption{Описание таблицы Users с кратким именем USR\label{tab:users}}\\
+	\caption{Описание таблицы Users\label{tab:users}}\\
 	\hline
-	\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	\multicolumn{1}{|c|}{Users} & \multicolumn{4}{c|}{USR} \\ \hline
+	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
+	%\multicolumn{1}{|c|}{Users} & \multicolumn{4}{c|}{USR} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
 	pk & * & id & NUMBER & 11 \\ \hline
 	& * & login & VARCHAR & 50 \\ \hline
