@@ -1,19 +1,19 @@
 \section{Рабочий проект}
-\subsection{Классы, используемые при разработке сайта}
-
+\subsection{Спецификация компонентов и классов системы}
 Можно выделить следующий список классов и их методов, использованных при разработке веб-приложения (таблица \ref{class:table}).
 
 \renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
 \begin{xltabular}{\textwidth}{|X|p{2.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|}
-\caption{Описание классов, используемых в приложении\label{class:table}}\\
+\caption{Описание классов и компонентов используемых в приложении\label{class:table}}\\
 \hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название класса & \centrow \setlength{\baselineskip}{0.7\baselineskip} Модуль, к которому относится класс & \centrow Описание класса & \centrow Методы \\
 \hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
 \endfirsthead
 \caption*{Продолжение таблицы \ref{class:table}}\\
 \hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
 \finishhead
-Validator & Валидатор & Validator - реализует логику валидации и проверки данных, которые намереваются отправить в sql, для поддержания её стабильности & required - проверка наличия значения, type - numeric, date, string, max - ограничение длины строки, pattern - валидация email/телефона, foreign - cуществование в связанной таблице.\\
-\hline * & * & * & *
+Validator & Валидатор & Validator - реализует логику валидации и проверки данных, которые намереваются отправить в sql, для поддержания её стабильности & required - проверка наличия значения, type - numeric, date, string, max - ограничение длины строки, pattern - валидация email/телефона, foreign - cуществование в связанной таблице.\\\hline
+ * & * & * & * \\\hline 
+ * & * & * & * 
 \end{xltabular}
 \renewcommand{\arraystretch}{1.0} % восстановление сетки
 
