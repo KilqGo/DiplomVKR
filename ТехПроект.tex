@@ -172,15 +172,17 @@ stock--management.php: Интерфейс для администраторов.
 	& * & stock & NUMBER & 5 \\ \hline
 \end{xltabular}
 
-\newpage
-
 % Таблица Processor
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
 	\caption{Описание таблицы Processor\label{tab:processor}}\\
 	\hline
-	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	%\multicolumn{1}{|c|}{Processor} & \multicolumn{4}{c|}{CPU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{tab:processor}}\\
+	\hline
+	Key Type & Optionality & Column name & Data type & Size \\ \hline
+	\endhead
+	
 	pk & * & cpu\_id & NUMBER & 13 \\ \hline
 	& * & unit\_name & VARCHAR2 & 50 \\ \hline
 	& * & socket & VARCHAR2 & 30 \\ \hline
@@ -189,6 +191,7 @@ stock--management.php: Интерфейс для администраторов.
 	& * & cpu\_manufacturer & VARCHAR2 & 110 \\ \hline
 	& * & price & NUMBER & 30 \\ \hline
 	& * & stock & NUMBER & 5 \\ \hline
+
 \end{xltabular}
 
 % Таблица RAM
@@ -225,21 +228,24 @@ stock--management.php: Интерфейс для администраторов.
 	& * & stock & NUMBER & 5 \\ \hline
 \end{xltabular}
 
-\newpage
-
 % Таблица Power Unit
 \begin{xltabular}{\textwidth}{|X|X|p{4.0cm}|X|X|}
 	\caption{Описание таблицы Power\_unit\label{tab:psu}}\\
 	\hline
-	%\multicolumn{1}{|c|}{Имя таблицы} & \multicolumn{4}{c|}{Краткое имя таблицы} \\ \hline
-	%\multicolumn{1}{|c|}{Power\_unit} & \multicolumn{4}{c|}{PSU} \\ \hline
 	Key Type & Optionality & Column name & Data type & Size \\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{tab:psu}}\\
+	\hline
+	Key Type & Optionality & Column name & Data type & Size \\ \hline
+	\endhead
+	
 	pk & * & psu\_id & NUMBER & 13 \\ \hline
 	& * & power\_name & VARCHAR2 & 50 \\ \hline
 	& * & capability & NUMBER & 20 \\ \hline
 	& * & power\_manufacturer & VARCHAR2 & 110 \\ \hline
 	& * & price & NUMBER & 30 \\ \hline
 	& * & stock & NUMBER & 5 \\ \hline
+	
 \end{xltabular}
 
 % Таблица Graphics Card

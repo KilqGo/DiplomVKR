@@ -1,142 +1,816 @@
 \appendix{Фрагменты исходного кода программы}
 
 
-Orderform.php
-\begin{figure}[ht]
-	\begin{lstlisting}[language=Php]
-		// Функция получения компонентов и загрузка данных
-		function getComponents($link, $table, $id_col, $name_col, $check_stock = false) {
-			$data = [];
-			$sql = $check_stock 
-			? "SELECT $id_col, $name_col, stock FROM $table WHERE stock > 0"
-			: "SELECT $id_col, $name_col FROM $table";
-			
-			$result = mysqli_query($link, $sql);
-			if ($result && mysqli_num_rows($result) > 0) {
-				while ($row = mysqli_fetch_assoc($result)) {
-					$item = ['name' => $row[$name_col]];
-					if ($check_stock) $item['stock'] = $row['stock'];
-					$data[$row[$id_col]] = $item;
+Order\_form.php
+\begin{lstlisting}[language=Php, frame=none]
+// Подключение к SQL
+$host = 'localhost';
+$user = 'root';
+$password = '';
+$db_name = 'web_magazin';
+
+$link = mysqli_connect($host, $user, $password, $db_name);
+
+if (!$link) {
+	die("Ошибка подключения: " . mysqli_connect_error());
+}
+
+function getComponents($link, $table, $id_col, $name_col, $check_stock = false) {
+	$data = [];
+	$sql = $check_stock 
+	? "SELECT $id_col, $name_col, stock FROM $table WHERE stock > 0"
+	: "SELECT $id_col, $name_col FROM $table";
+	
+	$result = mysqli_query($link, $sql);
+	if ($result && mysqli_num_rows($result) > 0) {
+		while ($row = mysqli_fetch_assoc($result)) {
+			$item = ['name' => $row[$name_col]];
+			if ($check_stock) $item['stock'] = $row['stock'];
+			$data[$row[$id_col]] = $item;
+		}
+	}
+	return $data;
+}
+
+$customers = getComponents($link, 'customer', 'ctr_id', 'full_name');
+$masters = getComponents($link, 'master', 'mtr_id', 'full_name');
+
+$components = [
+'gpu' => getComponents($link, 'gpu', 'gpu_id', 'gpu_name', true),
+'mcase' => getComponents($link, 'mcase', 'cse_id', 'case_name', true),
+'motherboard' => getComponents($link, 'motherboard', 'mbd_id', 'motherboard_name', true),
+'powerunit' => getComponents($link, 'powerunit', 'psu_id', 'power_name', true),
+'processor' => getComponents($link, 'processor', 'cpu_id', 'unit_name', true),
+'ram' => getComponents($link, 'ram', 'ram_id', 'ram_name', true),
+'storage' => getComponents($link, 'storage', 'sdu_id', 'storage_name', true)
+];
+
+$errors = [];
+$success_message = '';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+	// Валидация данных
+	$assembly_price = $_POST["assembly_price"];
+	if (strlen($assembly_price) > 6) {
+		$errors['assembly_price'] = "Цена должна содержать не более 6 символов.";
+	} elseif (!is_numeric($assembly_price) || $assembly_price < 0) {
+		$errors['assembly_price'] = "Цена должна быть неотрицательным числом.";
+	}
+	
+	$delivery_address = $_POST["delivery_address"];
+	if (strlen($delivery_address) > 110) {
+		$errors['delivery_address'] = "Адрес доставки не должен превышать 110 символов.";
+	}
+	
+	$date_of_admission = $_POST["date_of_admission"];
+	$date_of_delivery = $_POST["date_of_delivery"];
+	
+	if (strtotime($date_of_admission) > time()) {
+		$errors['date_of_admission'] = "Дата оформления не может быть в будущем.";
+	}
+	
+	if (strtotime($date_of_delivery) < strtotime($date_of_admission)) {
+		$errors['date_of_delivery'] = "Дата доставки должна быть позже даты оформления.";
+	}
+	
+	$component_ids = [
+	'gpu_id' => $_POST['gpu_id'],
+	'cse_id' => $_POST['cse_id'],
+	'mbd_id' => $_POST['mbd_id'],
+	'psu_id' => $_POST['psu_id'],
+	'cpu_id' => $_POST['cpu_id'],
+	'ram_id' => $_POST['ram_id'],
+	'sdu_id' => $_POST['sdu_id']
+	];
+	
+	if (empty($errors)) {
+		mysqli_autocommit($link, false);
+		
+		try {
+			// Проверка остатков компонентов
+			foreach ($component_ids as $field => $id) {
+				$table = get_table_name($field);
+				$stmt = $link->prepare("SELECT stock FROM $table WHERE ".get_id_column($table)." = ? FOR UPDATE");
+				$stmt->bind_param("i", $id);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				
+				if (!$result || $result->num_rows === 0) {
+					throw new Exception("Компонент $table не найден");
+				}
+				
+				$row = $result->fetch_assoc();
+				if ($row['stock'] < 1) {
+					throw new Exception("Недостаточно $table на складе");
 				}
 			}
-			return $data;
+			
+			// Добавление заказа
+			$stmt = $link->prepare("INSERT INTO assembly (
+			assembly_price, date_of_admission, date_of_delivery, delivery_address,
+			ctr_id, mtr_id, gpu_id, cse_id, mbd_id, psu_id, cpu_id, ram_id, sdu_id
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			
+			$stmt->bind_param("dsssiiiiiiiii",
+			$_POST['assembly_price'],
+			$_POST['date_of_admission'],
+			$_POST['date_of_delivery'],
+			$_POST['delivery_address'],
+			$_POST['ctr_id'],
+			$_POST['mtr_id'],
+			$_POST['gpu_id'],
+			$_POST['cse_id'],
+			$_POST['mbd_id'],
+			$_POST['psu_id'],
+			$_POST['cpu_id'],
+			$_POST['ram_id'],
+			$_POST['sdu_id']
+			);
+			
+			if (!$stmt->execute()) throw new Exception("Ошибка оформления: ".$stmt->error);
+			
+			// Обновление остатков
+			foreach ($component_ids as $field => $id) {
+				$table = get_table_name($field);
+				$stmt = $link->prepare("UPDATE $table SET stock = stock - 1 WHERE ".get_id_column($table)." = ?");
+				$stmt->bind_param("i", $id);
+				if (!$stmt->execute()) throw new Exception("Ошибка обновления: ".$stmt->error);
+			}
+			
+			mysqli_commit($link);
+			$success_message = "Заказ успешно оформлен!";
+		} catch (Exception $e) {
+			mysqli_rollback($link);
+			$errors[] = $e->getMessage();
+		} finally {
+			mysqli_autocommit($link, true);
 		}
-		
-		$customers = getComponents($link, 'customer', 'ctr_id', 'full_name');
-		$masters = getComponents($link, 'master', 'mtr_id', 'full_name');
-		
-		$components = [
-		'gpu' => getComponents($link, 'gpu', 'gpu_id', 'gpu_name', true),
-		'mcase' => getComponents($link, 'mcase', 'cse_id', 'case_name', true),
-		'motherboard' => getComponents($link, 'motherboard', 'mbd_id', 'motherboard_name', true),
-		'powerunit' => getComponents($link, 'powerunit', 'psu_id', 'power_name', true),
-		'processor' => getComponents($link, 'processor', 'cpu_id', 'unit_name', true),
-		'ram' => getComponents($link, 'ram', 'ram_id', 'ram_name', true),
-		'storage' => getComponents($link, 'storage', 'sdu_id', 'storage_name', true)
-		];
-	\end{lstlisting}
-	\caption{Функция получения компонентов и загрузка данных}
-	\label{fig:orderform_part1}
-\end{figure}
+	}
+}
 
-\begin{figure}[ht]
-	\begin{lstlisting}[language=Php]
-		// Обработка POST-запроса и валидация данных
-		$errors = [];
-		$success_message = '';
-		
-		if ($_SERVER["REQUEST_METHOD"] == "POST") {
-			// Валидация данных
-			$assembly_price = $_POST["assembly_price"];
-			if (strlen($assembly_price) > 6) {
-				$errors['assembly_price'] = "Цена должна содержать не более 6 символов.";
-			} elseif (!is_numeric($assembly_price) || $assembly_price < 0) {
-				$errors['assembly_price'] = "Цена должна быть неотрицательным числом.";
-			}
-			
-			$delivery_address = $_POST["delivery_address"];
-			if (strlen($delivery_address) > 110) {
-				$errors['delivery_address'] = "Адрес доставки не должен превышать 110 символов.";
-			}
-			
-			$date_of_admission = $_POST["date_of_admission"];
-			$date_of_delivery = $_POST["date_of_delivery"];
-			
-			if (strtotime($date_of_admission) > time()) {
-				$errors['date_of_admission'] = "Дата оформления не может быть в будущем.";
-			}
-			
-			if (strtotime($date_of_delivery) < strtotime($date_of_admission)) {
-				$errors['date_of_delivery'] = "Дата доставки должна быть позже даты оформления.";
-			}			
-			$component_ids = [
-			'gpu_id' => $_POST['gpu_id'],
-			'cse_id' => $_POST['cse_id'],
-			'mbd_id' => $_POST['mbd_id'],
-			'psu_id' => $_POST['psu_id'],
-			'cpu_id' => $_POST['cpu_id'],
-			'ram_id' => $_POST['ram_id'],
-			'sdu_id' => $_POST['sdu_id']
-			];		
-			.
-			.
-			.
-			.
-			.		   
-	\end{lstlisting}
-\caption{Обработка формы заказа и обновление базы данных}
-\label{fig:orderform_part2}
-\end{figure}
+function get_id_column($table) {
+	$columns = [
+	'gpu' => 'gpu_id',
+	'mcase' => 'cse_id',
+	'motherboard' => 'mbd_id',
+	'powerunit' => 'psu_id',
+	'processor' => 'cpu_id',
+	'ram' => 'ram_id',
+	'storage' => 'sdu_id'
+	];
+	return $columns[$table] ?? 'id';
+}
 
-\begin{figure}[ht]
-	\begin{lstlisting}[language=Php]
-			if (empty($errors)) {
-				mysqli_autocommit($link, false);				
-				try {
-					// Проверка остатков компонентов
-					foreach ($component_ids as $field => $id) {
-						$table = get_table_name($field);
-						$stmt = $link->prepare("SELECT stock FROM $table WHERE ".get_id_column($table)." = ? FOR UPDATE");
-						$stmt->bind_param("i", $id);
-						$stmt->execute();
-						$result = $stmt->get_result();						
-						if (!$result || $result->num_rows === 0) {
-							throw new Exception("Компонент $table не найден");
-						}						
-						$row = $result->fetch_assoc();
-						if ($row['stock'] < 1) {
-							throw new Exception("Недостаточно $table на складе");
-						}}					
-					// Добавление заказа
-					$stmt = $link->prepare("INSERT INTO assembly (
-					assembly_price, date_of_admission, date_of_delivery, delivery_address,
-					ctr_id, mtr_id, gpu_id, cse_id, mbd_id, psu_id, cpu_id, ram_id, sdu_id
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");					
-					$stmt->bind_param("dsssiiiiiiiii",
-					$_POST['assembly_price'],
-					$_POST['date_of_admission'],
-					$_POST['date_of_delivery'],
-					$_POST['delivery_address'],
-					$_POST['ctr_id'],
-					$_POST['mtr_id'],
-					$_POST['gpu_id'],
-					$_POST['cse_id'],
-					$_POST['mbd_id'],
-					$_POST['psu_id'],
-					$_POST['cpu_id'],
-					$_POST['ram_id'],
-					$_POST['sdu_id']);	
-					if (!$stmt->execute()) throw new Exception("Ошибка оформления: ".$stmt->error);
-					// Обновление остатков
-					foreach ($component_ids as $field => $id) {
-						$table = get_table_name($field);
-						$stmt = $link->prepare("UPDATE $table SET stock = stock - 1 WHERE ".get_id_column($table)." = ?");
-						$stmt->bind_param("i", $id);
-						if (!$stmt->execute()) throw new Exception("Ошибка обновления: ".$stmt->error);}
-	\end{lstlisting}
-\caption{Обработка формы заказа и обновление базы данных}
-\label{fig:orderform_part3}
-\end{figure}
+function get_table_name($field) {
+	$mapping = [
+	'gpu_id' => 'gpu',
+	'cse_id' => 'mcase',
+	'mbd_id' => 'motherboard',
+	'psu_id' => 'powerunit',
+	'cpu_id' => 'processor',
+	'ram_id' => 'ram',
+	'sdu_id' => 'storage'
+	];
+	return $mapping[$field] ?? str_replace('_id', '', $field);
+}
+
+...
+
+// main 
+<?php if (!empty($errors)): ?>
+<div class="errors">
+<?php foreach ($errors as $error): ?>
+<p>⚠️ <?= $error ?></p>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($success_message): ?>
+<div class="success">✅ <?= $success_message ?></div>
+<?php endif; ?>
+
+<form method="post" autocomplete="off">
+<label for="assembly_price">Цена сборки:</label>
+<input type="number" id="assembly_price" name="assembly_price" 
+value="<?= htmlspecialchars($_POST['assembly_price'] ?? '') ?>" required>
+
+<label for="date_of_admission">Дата оформления:</label>
+<input type="date" id="date_of_admission" name="date_of_admission"
+value="<?= htmlspecialchars($_POST['date_of_admission'] ?? '') ?>" required>
+
+<label for="date_of_delivery">Дата доставки:</label>
+<input type="date" id="date_of_delivery" name="date_of_delivery" 
+value="<?= htmlspecialchars($_POST['date_of_delivery'] ?? '') ?>" required>
+
+<label for="delivery_address">Адрес доставки:</label>
+<input type="text" id="delivery_address" name="delivery_address" 
+value="<?= htmlspecialchars($_POST['delivery_address'] ?? '') ?>" 
+maxlength="110" required>
+
+<label for="ctr_id">Клиент:</label>
+<select id="ctr_id" name="ctr_id" required>
+<option value="">Выберите клиента</option>
+<?php foreach ($customers as $id => $item): ?>
+<option value="<?= $id ?>" <?= ($_POST['ctr_id'] ?? '') == $id ? 'selected' : '' ?>>
+<?= htmlspecialchars($item['name']) ?>
+</option>
+<?php endforeach; ?>
+</select>
+
+<label for="mtr_id">Мастер:</label>
+<select id="mtr_id" name="mtr_id" required>
+<option value="">Выберите мастера</option>
+<?php foreach ($masters as $id => $item): ?>
+<option value="<?= $id ?>" <?= ($_POST['mtr_id'] ?? '') == $id ? 'selected' : '' ?>>
+<?= htmlspecialchars($item['name']) ?>
+</option>
+<?php endforeach; ?>
+</select>
+
+<?php
+// Массив для полей с поиском
+$component_fields = [
+'gpu_id' => ['label' => 'Видеокарта', 'data' => $components['gpu']],
+'cse_id' => ['label' => 'Корпус', 'data' => $components['mcase']],
+'mbd_id' => ['label' => 'Материнская плата', 'data' => $components['motherboard']],
+'psu_id' => ['label' => 'Блок питания', 'data' => $components['powerunit']],
+'cpu_id' => ['label' => 'Процессор', 'data' => $components['processor']],
+'ram_id' => ['label' => 'Оперативная память', 'data' => $components['ram']],
+'sdu_id' => ['label' => 'Накопитель', 'data' => $components['storage']]
+];
+foreach ($component_fields as $field => $config):
+$input_value = '';
+// Получить выбранное название по id, если есть
+if (isset($_POST[$field]) && $_POST[$field] && isset($config['data'][$_POST[$field]])) {
+	$input_value = htmlspecialchars($config['data'][$_POST[$field]]['name']);
+}
+?>
+<label for="<?= $field ?>_input"><?= $config['label'] ?>:</label>
+<div class="dropdown-field">
+<input type="text"
+class="dropdown-input"
+id="<?= $field ?>_input"
+name="<?= $field ?>_input"
+placeholder="Начните вводить..."
+value="<?= $input_value ?>"
+autocomplete="off"
+data-dropdown="<?= $field ?>"
+required
+style="background:#333;cursor:pointer;"
+>
+<button type="button" class="dropdown-btn" tabindex="-1" onclick="toggleDropdown('<?= $field ?>')">&#x25BC;</button>
+<ul class="dropdown-list" id="<?= $field ?>_list">
+<li data-value="">Выберите <?= mb_strtolower($config['label']) ?>...</li>
+<?php foreach ($config['data'] as $id => $item): ?>
+<li data-value="<?= $id ?>">
+<?= htmlspecialchars($item['name']) ?>
+<?php if(isset($item['stock'])): ?>
+<span class="stock-info">(Ост: <?= $item['stock'] ?>)</span>
+<?php endif; ?>
+</li>
+<?php endforeach; ?>
+</ul>
+<input type="hidden" name="<?= $field ?>" id="<?= $field ?>" value="<?= htmlspecialchars($_POST[$field] ?? '') ?>">
+</div>
+<?php endforeach; ?>
+
+<input type="submit" value="Оформить заказ">
+</form>
+
+...
+
+//skript
+<script>
+document.querySelectorAll('.dropdown-input').forEach(function(input) {
+	input.addEventListener('focus', function() {
+		showDropdown(this.dataset.dropdown);
+	});
+	input.addEventListener('input', function() {
+		filterDropdown(this.dataset.dropdown, this.value);
+	});
+});
+
+// Открытие по кнопке
+function toggleDropdown(field) {
+	var list = document.getElementById(field + '_list');
+	list.classList.toggle('show');
+	document.getElementById(field + '_input').focus();
+}
+function showDropdown(field) {
+	document.querySelectorAll('.dropdown-list').forEach(function(list) {
+		list.classList.remove('show');
+	});
+	document.getElementById(field + '_list').classList.add('show');
+}
+
+// Фильтрация списка
+function filterDropdown(field, value) {
+	var list = document.getElementById(field + '_list');
+	var filter = value.toLowerCase();
+	list.querySelectorAll('li').forEach(function(li, idx) {
+		if (idx === 0) return; 
+		li.style.display = li.textContent.toLowerCase().includes(filter) ? '' : 'none';
+	});
+}
+
+// Выбор элемента
+document.querySelectorAll('.dropdown-list').forEach(function(list) {
+	list.addEventListener('click', function(e) {
+		if (e.target.tagName.toLowerCase() === 'li') {
+			var val = e.target.getAttribute('data-value');
+			var field = this.id.replace('_list','');
+			var input = document.getElementById(field + '_input');
+			var hidden = document.getElementById(field);
+			if (val) {
+				input.value = e.target.childNodes[0].textContent.trim();
+				hidden.value = val;
+			} else {
+				input.value = '';
+				hidden.value = '';
+			}
+			this.classList.remove('show');
+		}
+	});
+});
+
+// Закрытие списка клик
+document.addEventListener('click', function(e) {
+	if (!e.target.classList.contains('dropdown-input') && !e.target.classList.contains('dropdown-btn')) {
+		document.querySelectorAll('.dropdown-list').forEach(function(list) {
+			list.classList.remove('show');
+		});
+	}
+});
+</script>
+\end{lstlisting}
+
+Edit\_content.php
+
+\begin{lstlisting}[language=Php, frame=none]
+if (!isset($_SESSION['user_id']) || $_SESSION['adminflag'] != 1) {
+	header("Location: login.php");
+	exit;
+}
+
+$selected_table = $_GET['table'] ?? 'assembly';
+$search_query = $_GET['search'] ?? '';
+
+// Массивы данных для таблиц
+$table_headers = [
+'assembly' => ['ID', 'Цена', 'Дата составления', 'Дата доставки', 'Адрес доставки', 'ID клиента', 'ID мастера', 'GPU ID', 'Case ID', 'Motherboard ID', 'Power Unit ID', 'Processor ID', 'RAM ID', 'Storage ID', 'Действия'],
+'master' => ['ID', 'Имя', 'Телефон', 'Адрес', 'Действия'],
+'customer' => ['ID', 'Имя', 'Телефон', 'Адрес', 'Действия'],
+'gpu' => ['ID', 'Название', 'Объем памяти', 'Серия', 'Производитель', 'Цена', 'Действия'],
+'mcase' => ['ID', 'Название', 'Форм-фактор', 'Размер', 'Производитель', 'Цена', 'Действия'],
+'motherboard' => ['ID', 'Название', 'Форм-фактор', 'Чипсет', 'Сокет', 'Производитель', 'Цена', 'Действия'],
+'powerunit' => ['ID', 'Название', 'Мощность', 'Производитель', 'Цена', 'Действия'],
+'processor' => ['ID', 'Название', 'Сокет', 'Базовая частота', 'Количество ядер', 'Производитель', 'Цена', 'Действия'],
+'ram' => ['ID', 'Название', 'Объем памяти', 'Тип', 'Частота', 'Производитель', 'Цена', 'Действия'],
+'storage' => ['ID', 'Название', 'Объем', 'Скорость чтения', 'Тип', 'Производитель', 'Цена', 'Действия']
+];
+
+$table_columns = [
+'assembly' => ['assembly_order_id', 'assembly_price', 'date_of_admission', 'date_of_delivery', 'delivery_address', 'ctr_id', 'mtr_id', 'gpu_id', 'cse_id', 'mbd_id', 'psu_id', 'cpu_id', 'ram_id', 'sdu_id'],
+'master' => ['mtr_id', 'full_name', 'phone_number', 'legal_address'],
+'customer' => ['ctr_id', 'full_name', 'phone_number', 'legal_address'],
+'gpu' => ['gpu_id', 'gpu_name', 'gmemory_size', 'gpu_series', 'gpu_manufacturer', 'price'],
+'mcase' => ['cse_id', 'case_name', 'form_factor', 'case_size', 'case_manufacturer', 'price'],
+'motherboard' => ['mbd_id', 'motherboard_name', 'form_factor', 'chipset', 'socket', 'board_manufacturer', 'price'],
+'powerunit' => ['psu_id', 'power_name', 'capability', 'power_manufacturer', 'price'],
+'processor' => ['cpu_id', 'unit_name', 'socket', 'base_frequency', 'number_of_cores', 'cpu_manufacturer', 'price'],
+'ram' => ['ram_id', 'ram_name', 'memory_size', 'type', 'base_frequency', 'ram_manufacturer', 'price'],
+'storage' => ['sdu_id', 'storage_name', 'storage_capacity', 'reading_speed', 'sdu_type', 'sdu_manufacturer', 'price']
+];
+
+$search_columns = [
+'assembly' => 'assembly_order_id',
+'master' => 'full_name',
+'customer' => 'full_name',
+'gpu' => 'gpu_name',
+'mcase' => 'case_name',
+'motherboard' => 'motherboard_name',
+'powerunit' => 'power_name',
+'processor' => 'unit_name',
+'ram' => 'ram_name',
+'storage' => 'storage_name'
+];
+
+<body>
+<header>
+<h1>🔧 Админ-панель PC Club</h1>
+<nav>
+<ul>
+<li><a href="stock_management.php">📦 Склад</a></li>
+<li><a href="index.php">🏠 Главная</a></li>
+<li><a href="order_form.php">🛒 Оформить заказ</a></li>
+<li><a href="logout.php">🚪 Выйти</a></li>
+</ul>
+</nav>
+</header>
+
+<div class="main-container">
+<form method="get">
+<div class="controls">
+<select name="table" onchange="this.form.submit()">
+<option value="assembly" <?= $selected_table == 'assembly' ? 'selected' : '' ?>>🎁 Сборки</option>
+<option value="master" <?= $selected_table == 'master' ? 'selected' : '' ?>>👨💼 Мастера</option>
+<option value="customer" <?= $selected_table == 'customer' ? 'selected' : '' ?>>👥 Клиенты</option>
+<option value="gpu" <?= $selected_table == 'gpu' ? 'selected' : '' ?>>🎮 Видеокарты</option>
+<option value="mcase" <?= $selected_table == 'mcase' ? 'selected' : '' ?>>🖥️ Корпуса</option>
+<option value="motherboard" <?= $selected_table == 'motherboard' ? 'selected' : '' ?>>🔌 Материнки</option>
+<option value="powerunit" <?= $selected_table == 'powerunit' ? 'selected' : '' ?>>🔋 Блоки питания</option>
+<option value="processor" <?= $selected_table == 'processor' ? 'selected' : '' ?>>⚡ Процессоры</option>
+<option value="ram" <?= $selected_table == 'ram' ? 'selected' : '' ?>>💾 ОЗУ</option>
+<option value="storage" <?= $selected_table == 'storage' ? 'selected' : '' ?>>💽 Накопители</option>
+</select>
+
+<div class="search-group">
+<input type="text" name="search" placeholder="🔍 Поиск..." value="<?= htmlspecialchars($search_query) ?>">
+<button type="submit">Найти</button>
+</div>
+
+<a href="add_data.php?table=<?= $selected_table ?>" class="button">➕ Добавить запись</a>
+</div>
+</form>
+<div class="table-container">
+<table class="data-table">
+<thead>
+<tr>
+<?php foreach ($table_headers[$selected_table] as $header): ?>
+<th><?= htmlspecialchars($header) ?></th>
+<?php endforeach; ?>
+</tr>
+</thead>
+<tbody>
+<?php
+$sql = "SELECT * FROM $selected_table";
+$params = [];
+
+...
+
+if (!empty($search_query)) {
+	$search_column = $search_columns[$selected_table];
+	$sql .= " WHERE $search_column LIKE ?";
+	$params[] = "%$search_query%";
+}
+
+$stmt = $link->prepare($sql);
+
+if ($stmt) {
+	if (!empty($params)) {
+		$stmt->bind_param(str_repeat('s', count($params)), ...$params);
+	}
+	
+	$stmt->execute();
+	$result = $stmt->get_result();
+	
+	while ($row = $result->fetch_assoc()):
+	?>
+	<tr>
+	<?php foreach ($table_columns[$selected_table] as $column): ?>
+	<td><?= htmlspecialchars($row[$column] ?? 'N/A') ?></td>
+	<?php endforeach; ?>
+	<td class="actions-cell">
+	<button onclick="editData('<?= $selected_table ?>', <?= $row[$table_columns[$selected_table][0]] ?>)">✏️</button>
+	<button onclick="deleteData('<?= $selected_table ?>', <?= $row[$table_columns[$selected_table][0]] ?>)">🗑️</button>
+	<?php if($selected_table === 'assembly'): ?>
+	<button onclick="exportAssembly(<?= $row['assembly_order_id'] ?>)">📤 Экспорт</button>
+	<?php endif; ?>
+	</td>
+	</tr>
+	<?php
+	endwhile;
+} else {
+	echo '<tr><td colspan="100%">Ошибка выполнения запроса</td></tr>';
+}
+?>
+</tbody>
+</table>
+</div>
+</div>
+
+<footer>
+© <?= date('Y') ?> PC Club | Все права защищены
+</footer>
+
+<script>
+function editData(table, id) {
+	window.location.href = `edit_form.php?table=${table}&id=${id}`;
+}
+
+function exportAssembly(id) {
+	window.open(`export.php?table=assembly&id=${id}&format=doc`, '_blank');
+}
+
+function deleteData(table, id) {
+	if (confirm('Вы уверены, что хотите удалить запись?')) {
+		const xhr = new XMLHttpRequest();
+		xhr.open('POST', 'delete_data.php', true);
+		xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+		xhr.onload = function() {
+			if (xhr.status === 200) {
+				alert(xhr.responseText);
+				location.reload();
+			} else {
+				alert('Ошибка при удалении');
+			}
+		};
+		xhr.send(`table=${table}&id=${id}`);
+	}
+}
+</script>
+</body>
+</html>
+\end{lstlisting}
+
+Edit\_form.php
+
+\begin{lstlisting}[language=Php, frame=none]
+<div class="main-container">
+<?php if (isset($_SESSION['errors'])): ?>
+<div class="alert alert-error">
+<?php foreach ($_SESSION['errors'] as $error): ?>
+<div>❌ <?= $error ?></div>
+<?php endforeach; ?>
+<?php unset($_SESSION['errors']); unset($_SESSION['old']); ?>
+</div>
+<?php endif; ?>
+
+<h2 class="form-title">Редактирование в таблице: <?= htmlspecialchars($table) ?></h2>
+
+<form class="data-form" method="post">
+<?php foreach ($row as $column => $value): ?>
+<?php if ($column !== $idColumn): ?>
+<div class="form-group">
+<label><?= $column ?></label>
+<input type="text" 
+name="<?= $column ?>" 
+value="<?= htmlspecialchars($_SESSION['old'][$column] ?? $value) ?>"
+class="<?= isset($_SESSION['errors'][$column]) ? 'error-field' : '' ?>">
+<?php if (isset($_SESSION['errors'][$column])): ?>
+<div class="field-error"><?= $_SESSION['errors'][$column] ?></div>
+<?php endif; ?>
+</div>
+<?php endif; ?>
+<?php endforeach; ?>
+<button type="submit">💾 Сохранить изменения</button>
+</form>
+</div>
+\end{lstlisting}
+
+Add\_data.php
+
+\begin{lstlisting}[language=PHP, frame=none]
+    <div class="main-container">
+<?php if (isset($_SESSION['errors'])): ?>
+<div class="alert alert-error">
+<?php foreach ($_SESSION['errors'] as $error): ?>
+<div>❌ <?= $error ?></div>
+<?php endforeach; ?>
+<?php unset($_SESSION['errors']); unset($_SESSION['old']); ?>
+</div>
+<?php endif; ?>
+
+<h2 class="form-title">Добавление в таблицу: <?= htmlspecialchars($table) ?></h2>
+
+<?php if ($table): ?>
+<form class="data-form" method="post">
+<?php
+$result = $link->query("SHOW COLUMNS FROM $table");
+while ($row = $result->fetch_assoc()):
+$column = $row['Field'];
+if ($column !== getIdColumn($table)):
+?>
+<div class="form-group">
+<label><?= $column ?></label>
+<input type="text" 
+name="<?= $column ?>" 
+value="<?= htmlspecialchars($_SESSION['old'][$column] ?? '') ?>"
+class="<?= isset($_SESSION['errors'][$column]) ? 'error-field' : '' ?>">
+<?php if (isset($_SESSION['errors'][$column])): ?>
+<div class="field-error"><?= $_SESSION['errors'][$column] ?></div>
+<?php endif; ?>
+</div>
+<?php endif; endwhile; ?>
+<button type="submit">➕ Добавить запись</button>
+</form>
+<?php endif; ?>
+</div>
+\end{lstlisting}
+
+Delete\_data.php
+
+\begin{lstlisting}[language=PHP, frame=none]
+// Удаляем данные из базы данных
+$idColumn = getIdColumn($table);
+$sql = "DELETE FROM $table WHERE $idColumn = ?";
+$stmt = $link->prepare($sql);
+$stmt->bind_param("i", $id);
+
+if ($stmt->execute()) {
+	echo "Запись успешно удалена.";
+} else {
+	echo "Ошибка удаления записи: " . $link->error;
+}
+
+$stmt->close();
+mysqli_close($link);
+?>
+\end{lstlisting}
+
+Export.php
+
+\begin{lstlisting}[language=php,frame=none]
+foreach ($components as $key => $component) {
+	$query = "SELECT {$component['name_column']} 
+	FROM {$component['table']} 
+	WHERE {$component['fk_column']} = ?";
+	
+	$stmt = $link->prepare($query);
+	$stmt->bind_param('i', $assembly[$component['fk_column']]);
+	$stmt->execute();
+	$result = $stmt->get_result()->fetch_assoc();
+	$assembly[$key] = $result[$component['name_column']] ?? 'Не указано';
+}
+
+$html = '<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Сборка #'.$assembly['assembly_order_id'].'</title>
+<style>
+body { font-family: Arial, sans-serif; }
+h1 { color: #2c3e50; }
+ul { list-style-type: none; padding: 0; }
+li { margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>Детали сборки #'.$assembly['assembly_order_id'].'</h1>
+
+<div>
+<p><strong>Цена:</strong> '.number_format($assembly['assembly_price'], 0, '', ' ').' руб.</p>
+<p><strong>Дата составления:</strong> '.$assembly['date_of_admission'].'</p>
+<p><strong>Адрес доставки:</strong> '.$assembly['delivery_address'].'</p>
+</div>
+
+<h2>Компоненты:</h2>
+<ul>';
+
+foreach ($components as $key => $component) {
+	$html .= '<li><strong>'.ucfirst($key).':</strong> '.$assembly[$key].'</li>';
+}
+
+$html .= '</ul>
+</body>
+</html>';
+
+header("Content-Type: application/msword");
+header("Content-Disposition: attachment; filename=assembly_".$id.".doc");
+header("Content-Transfer-Encoding: binary");
+header("Expires: 0");
+echo $html;
+\end{lstlisting}
+
+Login.php
+
+\begin{lstlisting}[language=PHP,frame=none]
+if (isset($_SESSION['user_id'])) {
+	if ($_SESSION['adminflag'] == 1) {
+		header("Location: edit_content.php");
+	} else {
+		header("Location: index.php");
+	}
+	exit;
+}
+
+$error = '';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+	if (isset($_POST['login'])) {
+		// Обработка входа
+		$username = $_POST['username'];
+		$password = $_POST['password'];
+		
+		$sql = "SELECT id, password, adminflag FROM users WHERE login = ?";
+		$stmt = mysqli_prepare($link, $sql);
+		mysqli_stmt_bind_param($stmt, "s", $username);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+		
+		if (mysqli_num_rows($result) > 0) {
+			$user = mysqli_fetch_assoc($result);
+			if (password_verify($password, $user['password'])) {
+				$_SESSION['user_id'] = $user['id'];
+				$_SESSION['adminflag'] = $user['adminflag'];
+				if ($user['adminflag'] == 1) {
+					header("Location: edit_content.php");
+				} else {
+					header("Location: index.php");
+				}
+				exit;
+			} else {
+				$error = "Неверный пароль.";
+			}
+		} else {
+			$error = "Пользователь не найден.";
+		}
+		mysqli_stmt_close($stmt);
+	} elseif (isset($_POST['register'])) {
+		// Обработка регистрации
+		$username = $_POST['username'];
+		$password = $_POST['password'];
+		
+		// Проверка существования пользователя
+		$check_sql = "SELECT id FROM users WHERE login = ?";
+		$stmt = mysqli_prepare($link, $check_sql);
+		mysqli_stmt_bind_param($stmt, "s", $username);
+		mysqli_stmt_execute($stmt);
+		$check_result = mysqli_stmt_get_result($stmt);
+		
+		if (mysqli_num_rows($check_result) > 0) {
+			$error = "Пользователь с таким логином уже существует.";
+		} else {
+			$hashed_password = password_hash($password, PASSWORD_DEFAULT);
+			$insert_sql = "INSERT INTO users (login, password, adminflag) VALUES (?, ?, 0)";
+			$stmt = mysqli_prepare($link, $insert_sql);
+			mysqli_stmt_bind_param($stmt, "ss", $username, $hashed_password);
+			if (mysqli_stmt_execute($stmt)) {
+				$error = "Регистрация успешна. Теперь вы можете войти.";
+			} else {
+				$error = "Ошибка регистрации: " . mysqli_error($link);
+			}
+		}
+		mysqli_stmt_close($stmt);
+	}
+}
+
+...
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Авторизация - PC Club</title>
+<link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+<header>
+<h1>🔐 Авторизация PC Club</h1>
+<nav>
+<ul>
+<li><a href="index.php">🏠 Главная</a></li>
+<li><a href="order_form.php">🛒 Заказы</a></li>
+</ul>
+</nav>
+</header>
+
+<main>
+<div class="auth-container">
+<h2 class="auth-title">Вход / Регистрация</h2>
+
+<?php if ($error): ?>
+<div class="alert alert-error">
+⚠️ <?= htmlspecialchars($error) ?>
+</div>
+<?php endif; ?>
+
+<form method="post">
+<div class="form-group">
+<label>Имя пользователя</label>
+<input type="text" 
+name="username" 
+required
+placeholder="Введите ваш логин">
+</div>
+
+<div class="form-group">
+<label>Пароль</label>
+<input type="password" 
+name="password" 
+required
+placeholder="••••••••">
+</div>
+
+<div class="form-group">
+<button type="submit" name="login">🚪 Войти</button>
+<button type="submit" name="register">📝 Зарегистрироваться</button>
+</div>
+</form>
+
+<div class="auth-switch">
+<a href="index.php">← Вернуться на главную</a>
+</div>
+</div>
+</main>
+
+<footer>
+© <?= date('Y') ?> PC Club | Все права защищены
+</footer>
+</body>
+</html>
+\end{lstlisting}
 
 \clearpage
 \ifВКР{
